@@ -33,11 +33,11 @@ class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val expandCollapseButton: ImageView = itemView.expand_collapse_button
     val clickableContentView: LinearLayout = itemView.clickable_linear_layout
     val downloadButton: MaterialButton = itemView.download_button
-    val materialCardView: MaterialCardView = itemView.material_card_view
+    //val materialCardView: MaterialCardView = itemView.material_card_view
     var rotationAngle: Float = 0f
 
     fun bind(imageItem: ImageItem) {
-        materialCardView.setChecked(imageItem.isFavorite)
+        //materialCardView.setChecked(imageItem.isFavorite)
         expandableContent.visibility = if (imageItem.expanded) View.VISIBLE else View.GONE
         Glide.with(imageView).load(imageItem.downloadUrl).placeholder(ColorDrawable(Color.GRAY)).into(imageView)
         authorText.text = imageItem.author
@@ -63,8 +63,6 @@ class CustomAdapter(
         val intent = Intent(Intent.ACTION_VIEW)
 
         val imageItem = dataSet[position]
-        Log.d("TAG", viewHolder.imageView.width.toString())
-
         viewHolder.bind(imageItem)
 
         viewHolder.clickableContentView.setOnClickListener {
@@ -85,10 +83,8 @@ class CustomAdapter(
         }
 
         viewHolder.clickableContentView.setOnLongClickListener {
-            viewHolder.materialCardView.setChecked(!viewHolder.materialCardView.isChecked)
             cellClickListener.onCellLongClickListener(
-                imageItem.id,
-                !viewHolder.materialCardView.isChecked
+                imageItem.id
             )
             true
         }

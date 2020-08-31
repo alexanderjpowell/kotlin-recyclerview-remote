@@ -10,39 +10,38 @@ import android.util.Log
 import android.view.*
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GestureDetectorCompat
-import androidx.core.view.MotionEventCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
+import com.google.android.material.switchmaterial.SwitchMaterial
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(), CellClickListener {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
     private lateinit var viewManager: RecyclerView.LayoutManager
-    private lateinit var items: MutableList<ImageItem>
+    private var recyclerItems: MutableList<ImageItem> = mutableListOf()
+    private var all: MutableList<ImageItem> = mutableListOf()
+    private var favorites: MutableList<ImageItem> = mutableListOf()
     private lateinit var downloadManager: DownloadManager
     private var lastDownload = -1L
-    private lateinit var sharedPref: SharedPreferences// = this.getPreferences(Context.MODE_PRIVATE)
-    private lateinit var favoritesSet: MutableSet<String>// = mutableSetOf<String>()
-    private lateinit var mDetector: GestureDetectorCompat
+    private lateinit var sharedPref: SharedPreferences
+    private lateinit var favoritesSet: MutableSet<String>
+    private lateinit var switchMaterial: SwitchMaterial
+    private var showingFavorites: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mDetector = GestureDetectorCompat(this, MyGestureListener())
-        //mDetector.setOnDoubleTapListener(this)
-
+        switchMaterial = favorites_switch
         sharedPref = this.getPreferences(Context.MODE_PRIVATE)
-        favoritesSet = sharedPref.getStringSet("FAVORITE_IDS", setOf<String>())?:return
-
+        favoritesSet = sharedPref.getStringSet("FAVORITE_IDS", mutableSetOf<String>())?:return
         downloadManager = (getSystemService(DOWNLOAD_SERVICE) as DownloadManager)
 
-        //
         val queue = Volley.newRequestQueue(this)
         val url = "https://picsum.photos/v2/list"
         val stringRequest = JsonArrayRequest(
@@ -50,7 +49,6 @@ class MainActivity : AppCompatActivity(), CellClickListener {
             { response ->
                 viewManager = LinearLayoutManager(this)
 
-                items = mutableListOf()
                 for (i in 0 until response.length()) {
                     val imageItem = ImageItem(
                         response.getJSONObject(i).getString("id"),
@@ -61,104 +59,43 @@ class MainActivity : AppCompatActivity(), CellClickListener {
                         response.getJSONObject(i).getString("download_url"),
                         favoritesSet.contains(response.getJSONObject(i).getString("id"))
                     )
-                    items.add(imageItem)
+                    all.add(imageItem)
                 }
 
-                viewAdapter = CustomAdapter(items, this)
+                recyclerItems.addAll(all)
+
+                viewAdapter = CustomAdapter(recyclerItems, this)
 
                 recyclerView = findViewById<RecyclerView>(R.id.my_recycler_view).apply {
                     layoutManager = viewManager
                     adapter = viewAdapter
                 }
+
+                // Populate Favorites List
+                for (i in 0 until all.size) {
+                    if (favoritesSet.contains(all[i].id)) {
+                        favorites.add(all[i])
+                    }
+                }
             },
             {
-                //textView.text = "That didn't work!"
+                Log.d("MainActivity.kt", "That didn't work!")
             })
         queue.add(stringRequest)
-    }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        val inflater: MenuInflater = menuInflater
-        inflater.inflate(R.menu.favorites_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.show_all -> {
-                if (item.isChecked) {
-                    //Toast.makeText(baseContext, "checked", Toast.LENGTH_SHORT).show()
-                    // Show all
-                    //items.clear()
-                    items.removeAt(0)
-                    viewAdapter.notifyItemRemoved(0)
-                } else {
-                    //Toast.makeText(baseContext, "unchecked", Toast.LENGTH_SHORT).show()
-                    // Show only favorites
-                }
-                item.isChecked = !item.isChecked
-                true
+        switchMaterial.setOnCheckedChangeListener { _, isChecked ->
+            showingFavorites = !showingFavorites
+            recyclerItems.clear()
+            if (isChecked) { // Show only favorites
+                recyclerItems.addAll(favorites)
+            } else { // Show entire list
+                recyclerItems.addAll(all)
             }
-            else -> super.onOptionsItemSelected(item)
+            viewAdapter.notifyDataSetChanged()
+            toggleEmptyStateMessage()
         }
+
     }
-
-    //
-
-    /*override fun onDown(event: MotionEvent): Boolean {
-        Log.d("DEBUG_TAG", "onDown: $event")
-        return true
-    }
-
-    override fun onFling(
-        event1: MotionEvent,
-        event2: MotionEvent,
-        velocityX: Float,
-        velocityY: Float
-    ): Boolean {
-        Log.d("DEBUG_TAG", "onFling: $event1 $event2")
-        return true
-    }
-
-    override fun onLongPress(event: MotionEvent) {
-        Log.d("DEBUG_TAG", "onLongPress: $event")
-    }
-
-    override fun onScroll(
-        event1: MotionEvent,
-        event2: MotionEvent,
-        distanceX: Float,
-        distanceY: Float
-    ): Boolean {
-        Log.d("DEBUG_TAG", "onScroll: $event1 $event2")
-        return true
-    }
-
-    override fun onShowPress(event: MotionEvent) {
-        Log.d("DEBUG_TAG", "onShowPress: $event")
-    }
-
-    override fun onSingleTapUp(event: MotionEvent): Boolean {
-        Log.d("DEBUG_TAG", "onSingleTapUp: $event")
-        return true
-    }
-
-    override fun onDoubleTap(event: MotionEvent): Boolean {
-        Log.d("DEBUG_TAG", "onDoubleTap: $event")
-        return true
-    }
-
-    override fun onDoubleTapEvent(event: MotionEvent): Boolean {
-        Log.d("DEBUG_TAG", "onDoubleTapEvent: $event")
-        return true
-    }
-
-    override fun onSingleTapConfirmed(event: MotionEvent): Boolean {
-        Log.d("DEBUG_TAG", "onSingleTapConfirmed: $event")
-        return true
-    }*/
-
-    //
 
     override fun onCellClickListener(downloadUrl: String) {
         val uri: Uri = Uri.parse(downloadUrl)
@@ -180,38 +117,61 @@ class MainActivity : AppCompatActivity(), CellClickListener {
         Toast.makeText(applicationContext, "Download started and will run in background", Toast.LENGTH_LONG).show()
     }
 
-    override fun onCellLongClickListener(id: String, checked: Boolean) {
+    override fun onCellLongClickListener(id: String) {
         with (sharedPref.edit()) {
-
             clear()
-            if (favoritesSet.contains(id)) {
+            if (showingFavorites) {
+                Toast.makeText(baseContext, "Item removed from favorites", Toast.LENGTH_SHORT).show()
                 favoritesSet.remove(id)
+                val index: Int? = removeImageItemFromList(id)
+                if (index != null) {
+                    recyclerItems.clear()
+                    recyclerItems.addAll(favorites)
+                    viewAdapter.notifyItemRemoved(index)
+                    viewAdapter.notifyItemRangeChanged(0, favorites.size)
+                }
             } else {
-                favoritesSet.add(id)
+                Toast.makeText(baseContext, "Item added to favorites", Toast.LENGTH_SHORT).show()
+                val newFavorite: Boolean = favoritesSet.add(id)
+                if (newFavorite) getImageItemFromId(id)?.let { favorites.add(it) }
             }
             putStringSet("FAVORITE_IDS", favoritesSet)
             apply()
         }
+
+        toggleEmptyStateMessage()
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        val action: Int = MotionEventCompat.getActionMasked(event)
-        mDetector.onTouchEvent(event)
-        return super.onTouchEvent(event)
-    }
-
-    private class MyGestureListener : GestureDetector.SimpleOnGestureListener() {
-
-        override fun onDoubleTap(event: MotionEvent): Boolean {
-            Log.d("DEBUG_TAG", "onDoubleTap: $event")
-            return true
+    private fun removeImageItemFromList(id: String) : Int? {
+        for (i in 0 until favorites.size) {
+            if (favorites[i].id == id) {
+                favorites.removeAt(i)
+                return i
+            }
         }
+        return null
+    }
 
+    private fun getImageItemFromId(id: String) : ImageItem? {
+        for (i in 0 until all.size) {
+            if (all[i].id == id) {
+                return all[i]
+            }
+        }
+        return null
+    }
+
+    private fun toggleEmptyStateMessage() {
+        if (showingFavorites && favorites.size == 0) {
+            empty_state_text_view.visibility = View.VISIBLE
+        } else {
+            empty_state_text_view.visibility = View.GONE
+        }
     }
 
 }
 
 interface CellClickListener {
     fun onCellClickListener(downloadUrl: String)
-    fun onCellLongClickListener(id: String, checked: Boolean)
+    fun onCellLongClickListener(id: String)
 }

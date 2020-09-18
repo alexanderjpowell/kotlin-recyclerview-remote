@@ -8,3 +8,4 @@ This is a simple project intended as a learning exercise to get better acquainte
 - SharedPreferences API to save key/value data local storage
 - A few simple animations. The first is the expansion of a card when clicked.  The other is when a card is removed from the favorites collection.  
 - Material design library components like Cards, Buttons, Icons, etc.
+- Ability to save the images to local storage of the device (using DownloadManager)
